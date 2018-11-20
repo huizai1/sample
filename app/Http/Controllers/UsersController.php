@@ -9,6 +9,23 @@ use Auth;
 
 class UsersController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth', [
+            'except' => ['show', 'create', 'store','index']
+        ]);
+
+        $this->middleware('guest', [
+            'only' => ['create']
+        ]);
+    }
+
+    public function index()
+    {
+        $users = User::paginate(5);
+        return view('users.index', compact('users'));
+    }
+
     public function create()
     {
         return view('users.create');
@@ -16,14 +33,14 @@ class UsersController extends Controller
 
     public function show(User $user)
     {
-        if (Auth::check()) {
+        // if (Auth::check()) {
             // 已登录
             return view('users.show', compact('user'));
-        } else {
-            // 未登录
-            session()->flash('danger', '很抱歉，您未登录，请先登录');
-            return redirect('login');
-        }
+        // } else {
+        //     // 未登录
+        //     session()->flash('danger', '很抱歉，您未登录，请先登录');
+        //     return redirect('login');
+        // }
     }
 
     public function store(Request $request)
@@ -43,5 +60,45 @@ class UsersController extends Controller
         Auth::login($user);
         session()->flash('success', '欢迎，您将在这里开启一段新的旅程~');
         return redirect()->route('users.show', [$user]);
+    }
+
+    public function edit(User $user)
+    {
+        $this->authorize('update', $user);
+        return view('users.edit', compact('user'));
+    }
+
+    public function update(User $user, Request $request)
+    {
+        $this->validate($request, [
+            'name' => 'required|max:50',
+            'password' => 'nullable|confirmed|min:6'
+        ]);
+
+        $this->authorize('update', $user);
+
+        $data = [];
+        $data['name'] = $request->name;
+        if ($request->password) {
+            $data['password'] = bcrypt($request->password);
+        }
+        $user->update($data);
+
+        session()->flash('success', '个人资料更新成功！');
+        return redirect()->route('users.show', $user->id);
+
+        //其它写法 1：
+        //session()->flash('success', '个人资料更新成功！');
+        //return redirect()->route('users.edit', $user->id);
+        //其它写法 2：
+        //return redirect()->back();
+    }
+
+    public function destroy(User $user)
+    {
+        $this->authorize('destroy', $user);
+        $user->delete();
+        session()->flash('success', '成功删除用户！');
+        return back();
     }
 }
