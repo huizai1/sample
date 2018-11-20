@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Requests;
 use App\Models\User;
+use Auth;
 
 class UsersController extends Controller
 {
@@ -15,7 +16,14 @@ class UsersController extends Controller
 
     public function show(User $user)
     {
-        return view('users.show', compact('user'));
+        if (Auth::check()) {
+            // 已登录
+            return view('users.show', compact('user'));
+        } else {
+            // 未登录
+            session()->flash('danger', '很抱歉，您未登录，请先登录');
+            return redirect('login');
+        }
     }
 
     public function store(Request $request)
@@ -32,6 +40,7 @@ class UsersController extends Controller
             'password' => bcrypt($request->password),
         ]);
 
+        Auth::login($user);
         session()->flash('success', '欢迎，您将在这里开启一段新的旅程~');
         return redirect()->route('users.show', [$user]);
     }
